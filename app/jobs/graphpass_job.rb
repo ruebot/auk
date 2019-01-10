@@ -36,6 +36,9 @@ class GraphpassJob < ApplicationJob
       logger.info 'Executing: ' + combine_full_text_output_cmd
       system(combine_full_text_output_cmd)
       FileUtils.rm_rf(collection_derivatives + '/all-text/output')
+      combine_ner_output_cmd = 'find ' + collection_derivatives + '/ner -iname "part*" -type f -exec cat {} > ' + collection_derivatives + '/ner/' + c.collection_id.to_s + '-ner.txt \;'
+      system(combine_ner_output_cmd)
+      FileUtils.rm_rf(collection_derivatives + '/ner/output')
       TextfilterJob.set(queue: :textfilter)
                    .perform_later(user_id, collection_id)
     end

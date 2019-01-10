@@ -38,6 +38,7 @@ class SparkJob < ApplicationJob
       spark_threads = ENV['SPARK_THREADS']
       spark_heartbeat_interval = ENV['SPARK_HEARTBEAT_INTERVAL']
       spark_driver_max_result_size = ENV['SPARK_DRIVER_MAXRESULTSIZE']
+      ner_classifier = ENV['NER_CLASSIFIER_PATH']
       spark_job = %(
       import io.archivesunleashed._
       import io.archivesunleashed.app._
@@ -47,6 +48,7 @@ class SparkJob < ApplicationJob
       RecordLoader.loadArchives("#{collection_warcs}", sc).keepValidPages().map(r => (r.getCrawlDate, r.getDomain, r.getUrl, RemoveHTML(RemoveHttpHeader(r.getContentString)))).saveAsTextFile("#{collection_derivatives}/all-text/output")
       val links = RecordLoader.loadArchives("#{collection_warcs}", sc).keepValidPages().map(r => (r.getCrawlDate, ExtractLinks(r.getUrl, r.getContentString))).flatMap(r => r._2.map(f => (r._1, ExtractDomain(f._1).replaceAll("^\\\\s*www\\\\.", ""), ExtractDomain(f._2).replaceAll("^\\\\s*www\\\\.", "")))).filter(r => r._2 != "" && r._3 != "").countItems().filter(r => r._2 > 5)
       WriteGraphML(links, "#{collection_derivatives}/gephi/#{c.collection_id}-gephi.graphml")
+      ExtractEntities.extractFromRecords("#{ner_classifier}", "#{collection_warcs}", "#{collection_derivatives}/ner/output", sc)
       sys.exit
       )
       File.open(collection_spark_job_file, 'w') { |file| file.write(spark_job) }
